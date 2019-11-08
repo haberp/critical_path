@@ -1,6 +1,6 @@
 import csv
 import xml.etree.ElementTree as ET
-tree = ET.parse('C:/Users/peter/Downloads/EDM_Consumption_data_collection_at_Nordics_at_2019_11_06.bpmn')
+tree = ET.parse('C:/Users/vajda/Downloads/EDM - Consumption data collection at Nordics -at- 2019-11-06.bpmn')
 root = tree.getroot()
 
 parent_map = {c.tag:p.tag for p in root.iter( ) for c in p}
@@ -77,10 +77,8 @@ for key, value in list_of_elements_on_critical_path.items():
 for key in deletable_keys:    
     del list_of_elements_on_critical_path[key]
 
-print(list_of_elements_on_critical_path)
-#print(list_of_elements_with_duration)
-
 #writing element id, name and duration to csv
-with open('test.csv', 'w') as f:
+with open('test.csv', mode='w', newline='\n') as f:
+    writer = csv.writer(f, delimiter = ',', quotechar = '"', quoting=csv.QUOTE_MINIMAL)
     for key in  list_of_elements_on_critical_path.keys():
-        f.write("%s,%s,%s\n"%(key, str(list_of_elements_on_critical_path[key][1]), str(list_of_elements_on_critical_path[key][0])))
+        writer.writerow([key, list_of_elements_on_critical_path[key][1].encode('unicode-escape').decode(), list_of_elements_on_critical_path[key][0].encode('unicode-escape').decode()])
