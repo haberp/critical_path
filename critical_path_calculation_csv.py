@@ -1,7 +1,9 @@
 import csv
-import xml.etree.ElementTree as ET
+import lxml.etree as ET
 tree = ET.parse('C:/Users/vajda/Downloads/EDM - Consumption data collection at Nordics -at- 2019-11-06.bpmn')
 root = tree.getroot()
+
+print(root.find('bpmn:process', root.nsmap))
 
 parent_map = {c.tag:p.tag for p in root.iter( ) for c in p}
 
@@ -65,7 +67,7 @@ for element in elements_under_process:
 
 #extending the process element id and name with duration
 for key, duration in list_of_elements_with_duration.items():
-    if key in list_of_elements_on_critical_path.keys(): #<-check Task_1pqr0sq
+    if key in list_of_elements_on_critical_path.keys():
         list_of_elements_on_critical_path[key].append(duration)
 
 deletable_keys = set()
@@ -78,7 +80,9 @@ for key in deletable_keys:
     del list_of_elements_on_critical_path[key]
 
 #writing element id, name and duration to csv
+"""
 with open('test.csv', mode='w', newline='\n') as f:
     writer = csv.writer(f, delimiter = ',', quotechar = '"', quoting=csv.QUOTE_MINIMAL)
     for key in  list_of_elements_on_critical_path.keys():
         writer.writerow([key, list_of_elements_on_critical_path[key][1].encode('unicode-escape').decode(), list_of_elements_on_critical_path[key][0].encode('unicode-escape').decode()])
+"""
