@@ -1,9 +1,17 @@
 import csv
+import re
+import datetime
 import lxml.etree as ET
-tree = ET.parse('C:/Users/vajda/Downloads/EDM - Consumption data collection at Nordics -at- 2019-11-06.bpmn')
+bpmn_file_name = 'C:/Users/vajda/Downloads/EDM - Consumption data collection at Nordics -at- 2019-11-06.bpmn'
+tree = ET.parse(bpmn_file_name)
 root = tree.getroot()
 
-print(root.find('bpmn:process', root.nsmap))
+original_file_name = re.findall('([0-9a-zA-Z- ]+)\.', bpmn_file_name)
+
+csvFileName = "{}-on-{}-at-{}.csv".format(original_file_name[0], datetime.date.today(), datetime.datetime.now().strftime('%H-%M-%S'))
+
+delimiter_char = ";"
+#print(root.find('bpmn:process', root.nsmap))
 
 parent_map = {c.tag:p.tag for p in root.iter( ) for c in p}
 
@@ -80,9 +88,7 @@ for key in deletable_keys:
     del list_of_elements_on_critical_path[key]
 
 #writing element id, name and duration to csv
-"""
-with open('test.csv', mode='w', newline='\n') as f:
-    writer = csv.writer(f, delimiter = ',', quotechar = '"', quoting=csv.QUOTE_MINIMAL)
+with open (csvFileName, mode='w', newline='\n') as f:
+    writer = csv.writer(f, delimiter = delimiter_char, quotechar = '"', quoting=csv.QUOTE_MINIMAL)
     for key in  list_of_elements_on_critical_path.keys():
         writer.writerow([key, list_of_elements_on_critical_path[key][1].encode('unicode-escape').decode(), list_of_elements_on_critical_path[key][0].encode('unicode-escape').decode()])
-"""
