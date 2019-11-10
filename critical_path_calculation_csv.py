@@ -4,16 +4,41 @@ import datetime
 from urllib.request import urlopen
 import lxml.etree as ET
 
+def findprocesselementparent(parent_node):
+    if parent_node in element_ids_under_process:
+        return(parent_node)
+    else:
+        parent_of_parent = parent_node.getparent()
+        findprocesselementparent(parent_of_parent)
+
 bpmn_file_name = 'C:/Users/vajda/Downloads/EDM - Consumption data collection at Nordics -at- 2019-11-06.bpmn'
 tree = ET.parse(bpmn_file_name)
 root = tree.getroot()
 
-#process = tree.xpath('//bpmn:process', namespaces = root.nsmap)
-#print(root.find('bpmn:process', root.nsmap))
-
-delimiter_char = ";"
-
 parent_map = {c.tag:p.tag for p in root.iter( ) for c in p}
+parent_map_elements = {c:p for p in root.iter() for c in p}
+
+elements_under_process = []
+#collecting elements under the process section
+for key, value in parent_map.items():
+    if value == '{http://www.omg.org/spec/BPMN/20100524/MODEL}process':
+        elements_under_process.append(key)
+
+element_ids_under_process = []
+#collecting element ids under the process section
+for key, value in parent_map_elements.items():
+    if value.tag == '{http://www.omg.org/spec/BPMN/20100524/MODEL}process':
+        element_ids_under_process.append(key)
+
+#print(element_ids_under_process)
+
+#finding duration values and their process element ids
+durations = tree.xpath('//camunda:property', namespaces = root.nsmap)
+for _ in durations:
+    tag = _.tag
+    parentTag = findprocesselementparent(_.getparent())
+    durationValue = _.attrib['value']
+    print(tag, parentTag, durationValue)
 
 color_dict = {}
 
@@ -30,13 +55,6 @@ for task in root.iter('{http://www.omg.org/spec/BPMN/20100524/DI}BPMNEdge'):
     if task_color == 'rgb(187, 222, 251)':
         task_id = task.get('bpmnElement')
         color_dict[task_id] = task_color
-
-elements_under_process = []
-
-#collecting elements under the process section
-for key, value in parent_map.items():
-    if value == '{http://www.omg.org/spec/BPMN/20100524/MODEL}process':
-        elements_under_process.append(key)
 
 process_element_ids = {}
 
@@ -86,10 +104,12 @@ for key, value in  list_of_elements_on_critical_path.items():
     split = key.split('_')
     list_of_elements_on_critical_path[key].append(split[0])
 
+delimiter_char = ";"
 #writing element id, name and duration to csv
-
+"""
 with open (csvFileName, mode='w', newline='\n') as f:
     writer = csv.writer(f, delimiter = delimiter_char, quotechar = '"', quoting=csv.QUOTE_MINIMAL)
     for key in  list_of_elements_on_critical_path.keys():
         writer.writerow([list_of_elements_on_critical_path[key][1].encode('unicode-escape').decode(), list_of_elements_on_critical_path[key][2].encode('unicode-escape').decode(), key, list_of_elements_on_critical_path[key][0].encode('unicode-escape').decode()])
     print('CSV file created')
+"""
