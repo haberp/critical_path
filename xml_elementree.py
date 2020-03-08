@@ -29,6 +29,11 @@ element_ids_under_process = []
 for key, value in parent_map_elements.items():
     if value.tag == '{http://www.omg.org/spec/BPMN/20100524/MODEL}process':
         element_ids_under_process.append(key)
+        
+#extend element ids with subprocess element ids
+for key, value in parent_map_elements.items():
+    if value.tag == '{http://www.omg.org/spec/BPMN/20100524/MODEL}subProcess':
+        element_ids_under_process.append(key.tag)
 
 #print(element_ids_under_process)
 
