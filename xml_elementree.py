@@ -4,14 +4,18 @@ import datetime
 from urllib.request import urlopen
 import lxml.etree as ET
 
+CriticalPass = False #True or False
+delimiter_char = ";"
+
+#Find the parent element of the element under the process and subprocess
 def findprocesselementparent(parent_node):
     if parent_node in element_ids_under_process:
-        return(parent_node.tag)
+        return(parent_node)
     else:
         parent_of_parent = parent_node.getparent()
         return findprocesselementparent(parent_of_parent)
 
-bpmn_file_name = 'C:/Users/peter/Documents/GitHub/critical_path/EDM - Consumption data collection at Nordics -at- 2019-11-06.bpmn'
+bpmn_file_name = 'C:/Users/peter/Downloads/BV_-_Bill_Validation_Execution_-_exp.bpmn'
 tree = ET.parse(bpmn_file_name)
 root = tree.getroot()
 
@@ -24,6 +28,11 @@ for key, value in parent_map.items():
     if value == '{http://www.omg.org/spec/BPMN/20100524/MODEL}process':
         elements_under_process.append(key)
 
+#collecting elements under the subprocess section
+for key, value in parent_map.items():
+    if value == '{http://www.omg.org/spec/BPMN/20100524/MODEL}subProcess':
+        elements_under_process.append(key)
+
 element_ids_under_process = []
 #collecting element ids under the process section
 for key, value in parent_map_elements.items():
@@ -33,86 +42,66 @@ for key, value in parent_map_elements.items():
 #extend element ids with subprocess element ids
 for key, value in parent_map_elements.items():
     if value.tag == '{http://www.omg.org/spec/BPMN/20100524/MODEL}subProcess':
-        element_ids_under_process.append(key.tag)
-
-#print(element_ids_under_process)
-
+        element_ids_under_process.append(key)
+        
 #finding duration values and their process element ids
+dict_durations = {}
 durations = tree.xpath('//camunda:property', namespaces = root.nsmap)
-for _ in durations:
-    tag = _.tag
-    parentTag = findprocesselementparent(_.getparent())
-    durationValue = _.attrib['value']
-
-color_dict = {}
-
-#Process element idk és azok színeinek kigyűjtése a color_dict könyvtárba.{http://www.omg.org/spec/BPMN/20100524/DI}BPMNShape elérhetősége: root[2][0][0].tag
-for task in root.iter('{http://www.omg.org/spec/BPMN/20100524/DI}BPMNShape'):
-    task_color = task.get('{http://bpmn.io/schema/bpmn/biocolor/1.0}fill')
-    if task_color == 'rgb(187, 222, 251)':
-        task_id = task.get('bpmnElement')
-        color_dict[task_id] = task_color
-
-#Connector idk és azok színeinek kigyűjtése a color_dict könyvtárba.
-for task in root.iter('{http://www.omg.org/spec/BPMN/20100524/DI}BPMNEdge'):
-    task_color = task.get('{http://bpmn.io/schema/bpmn/biocolor/1.0}fill')
-    if task_color == 'rgb(187, 222, 251)':
-        task_id = task.get('bpmnElement')
-        color_dict[task_id] = task_color
+for element_property in durations:
+    durationValue = element_property.attrib['value']
+    parentTag = findprocesselementparent(element_property.getparent())
+    dict_durations[parentTag.get('id')] = durationValue
 
 process_element_ids = {}
-
 #collecting the id and name of the elements under the process
 for element in elements_under_process:
     for _ in root.iter(element):
-        process_element_ids[_.get('id')] = _.get('name')
+        process_element_ids.update({_.get('id'):[_.get('name')]})
+        if process_element_ids[_.get('id')][0] == None:
+            process_element_ids.update({_.get('id'):['Missing name']})
 
-# if process element id is in the color dictionary selects the the id and name of the process element
-list_of_elements_on_critical_path = {}
-for task_id, name in process_element_ids.items():
-    if task_id in color_dict.keys():
-        list_of_elements_on_critical_path[task_id] = [name]
+if CriticalPass:
 
-#getting duration and task id of process elements
-list_of_elements_with_duration = {}
-for element in elements_under_process:
-    for task in root.iter(element):
-        try:
-            duration = task[0][0][0].attrib['value']
-        except IndexError:
-            pass
-        else:
-            task_id = task.get('id')
-            list_of_elements_with_duration[task_id] = duration
+    color_dict = {}
+
+    #Process element idk és azok színeinek kigyűjtése a color_dict könyvtárba.{http://www.omg.org/spec/BPMN/20100524/DI}BPMNShape elérhetősége: root[2][0][0].tag
+    for task in root.iter('{http://www.omg.org/spec/BPMN/20100524/DI}BPMNShape'):
+        task_color = task.get('{http://bpmn.io/schema/bpmn/biocolor/1.0}fill')
+        if task_color == 'rgb(187, 222, 251)':
+            task_id = task.get('bpmnElement')
+            color_dict[task_id] = task_color
+
+    #Connector idk és azok színeinek kigyűjtése a color_dict könyvtárba.
+    for task in root.iter('{http://www.omg.org/spec/BPMN/20100524/DI}BPMNEdge'):
+        task_color = task.get('{http://bpmn.io/schema/bpmn/biocolor/1.0}fill')
+        if task_color == 'rgb(187, 222, 251)':
+            task_id = task.get('bpmnElement')
+            color_dict[task_id] = task_color
+
+    # if process element id is in the color dictionary selects the the id and name of the process element    
+    for task_id, name in process_element_ids.copy().items():
+        if task_id not in color_dict.keys():
+            del process_element_ids[task_id]
 
 #extending the process element id and name with duration
-for key, duration in list_of_elements_with_duration.items():
-    if key in list_of_elements_on_critical_path.keys():
-        list_of_elements_on_critical_path[key].append(duration)
-
-deletable_keys = set()
-
-for key, value in list_of_elements_on_critical_path.items():
-    if len(value) < 2:
-        deletable_keys.add(key)
-    
-for key in deletable_keys:    
-    del list_of_elements_on_critical_path[key]
-
-#Creating file name for csv creation
-original_file_name = re.findall('([0-9a-zA-Z- ]+)\.', bpmn_file_name)
-csvFileName = "{}-on-{}-at-{}.csv".format(original_file_name[0], datetime.date.today(), datetime.datetime.now().strftime('%H-%M-%S'))
+for key, name in process_element_ids.items():
+    if key in dict_durations.keys():
+        process_element_ids[key].append(dict_durations[key])
+    else:
+        process_element_ids[key].append("No duration value")
 
 #Adding key type to the list
-for key, value in  list_of_elements_on_critical_path.items():
+for key, value in  process_element_ids.items():
     split = key.split('_')
-    list_of_elements_on_critical_path[key].append(split[0])
+    process_element_ids[key].append(split[0])
 
-delimiter_char = ";"
+#Creating file name for csv creation
+original_file_name = re.findall('([0-9a-zA-Z-_ ]+)\.', bpmn_file_name)
+csvFileName = "{}-on-{}-at-{}.csv".format(original_file_name[0], datetime.date.today(), datetime.datetime.now().strftime('%H-%M-%S'))
+
 #writing element id, name and duration to csv
-
 with open (csvFileName, mode='w', newline='\n') as f:
     writer = csv.writer(f, delimiter = delimiter_char, quotechar = '"', quoting=csv.QUOTE_MINIMAL)
-    for key in  list_of_elements_on_critical_path.keys():
-        writer.writerow([list_of_elements_on_critical_path[key][1].encode('unicode-escape').decode(), list_of_elements_on_critical_path[key][2].encode('unicode-escape').decode(), key, list_of_elements_on_critical_path[key][0].encode('unicode-escape').decode()])
+    for key in  process_element_ids.keys():
+        writer.writerow([process_element_ids[key][1].encode('unicode-escape').decode(), process_element_ids[key][2].encode('unicode-escape').decode(), key, process_element_ids[key][0].encode('unicode-escape').decode()])
     print('CSV file created')
