@@ -19,7 +19,7 @@ def find_process_element_parent(parent_node):
 
 def collect_elemets_under_process():
     global elements_under_process
-    #collecting elements under the process section
+    #Collecting elements under the process section
     for key, value in parent_map.items():
         if value in config.process_elements:
             elements_under_process.append(key)
@@ -27,13 +27,13 @@ def collect_elemets_under_process():
 
 def collect_elemet_ids_under_process():
     global element_ids_under_process
-    #collecting element ids under the process section
+    #Collecting element ids under the process section
     for key, value in parent_map_elements.items():
         if value.tag in config.process_elements:
          element_ids_under_process.append(key)
             
 def collect_elemets_with_duration():
-    #finding duration values and their process element ids
+    #Finding duration values and their process element ids
     global dict_durations
     durations = tree.xpath('//camunda:property', namespaces = root.nsmap)
     for element_property in durations:
@@ -42,7 +42,7 @@ def collect_elemets_with_duration():
         dict_durations[parentTag.get('id')] = durationValue
 
 def collect_element_id_and_name():
-    #collecting the id and name of the elements under the process
+    #Collecting the id and name of the elements under the process
     global process_element_ids
     for element in elements_under_process:
         for _ in root.iter(element):
@@ -51,7 +51,7 @@ def collect_element_id_and_name():
                 process_element_ids.update({_.get('id'):['Missing name']})
 
 def collect_shape_element_id_and_colors():
-    #Process element idk és azok színeinek kigyűjtése a color_dict könyvtárba.
+    #Collect Shape element ids and colors from color_dict dictionary
     global color_dict
     for task in root.iter('{http://www.omg.org/spec/BPMN/20100524/DI}BPMNShape'):
         task_color = task.get('{http://bpmn.io/schema/bpmn/biocolor/1.0}fill')
@@ -60,7 +60,7 @@ def collect_shape_element_id_and_colors():
             color_dict[task_id] = task_color
 
 def collect_edge_element_id_and_colors():
-    #Connector idk és azok színeinek kigyűjtése a color_dict könyvtárba.
+    #Collect Edge element ids and colors from color_dict dictionary
     global color_dict
     for task in root.iter('{http://www.omg.org/spec/BPMN/20100524/DI}BPMNEdge'):
         task_color = task.get('{http://bpmn.io/schema/bpmn/biocolor/1.0}fill')
@@ -69,14 +69,14 @@ def collect_edge_element_id_and_colors():
             color_dict[task_id] = task_color
 
 def delete_elements_not_on_critical_path():    
-    # if process element id is in the color dictionary selects the the id and name of the process element
+    #Select the the id and name of the process element if process element id is in the color dictionary 
     global process_element_ids    
     for task_id, name in process_element_ids.copy().items():
         if task_id not in color_dict.keys():
             del process_element_ids[task_id]
 
 def extend_the_id_and_name_with_duration():
-    #extending the process element id and name with duration
+    #Extending the process element id and name with duration
     global process_element_ids
     for key, name in process_element_ids.items():
         if key in dict_durations.keys():
@@ -101,7 +101,7 @@ def create_csv_name():
         datetime.datetime.now().strftime('%H-%M-%S'))
 
 def create_csv(csv_file_name):
-    #writing element id, name and duration to csv
+    #Writing element id, name and duration to csv
     with open (csv_file_name, mode='w', newline='\n') as f:
         writer = csv.writer(f, delimiter = config.delimiter_char, quotechar = '"', quoting=csv.QUOTE_MINIMAL)
         for key in  process_element_ids.keys():
@@ -113,7 +113,7 @@ def create_csv(csv_file_name):
                 )
         print('CSV file created')
 
-#get the rgb value for the selected colors
+#Get the rgb value for colors on critical path
 critical_path_colors = lambda selected_colors: [config.colors[color] for color in config.selected_colors]
 
 tree = ET.parse(config.bpmn_file_name)
