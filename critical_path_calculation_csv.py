@@ -1,6 +1,6 @@
 #This program collects the process elements from a bpmn file with their name, type and duration and exports them to csv file
 #Creator: Peter Haber
-#Version: 1.0
+#Version: 1.1
 
 import csv
 import re
@@ -46,10 +46,10 @@ def collect_element_id_and_name():
     global process_element_ids
     for element in elements_under_process:
         for _ in root.iter(element):
-            process_element_ids.update({_.get('id'):[_.get('name')]})
-            if process_element_ids[_.get('id')][0] == None:
+            process_element_ids.update({_.get('id'):[re.sub(u'\n|\xa0', u' ', str(_.get('name')))]})
+            if process_element_ids[_.get('id')][0] == 'None':
                 process_element_ids.update({_.get('id'):['Missing name']})
-
+    
 def collect_shape_element_id_and_colors():
     #Collect Shape element ids and colors from color_dict dictionary
     global color_dict
